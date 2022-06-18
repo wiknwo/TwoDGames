@@ -30,30 +30,27 @@ import tkinter as tk
 from tkinter import messagebox
 
 class Cube():
-    """
-    Class representing snack eaten by snake
-
-    Attributes:
-    """
+    """Class representing snack eaten by snake"""
     rows, width = 20, 500
 
     def __init__(self, start, dirnx=1, dirny=0, color=(255, 0, 0)):
+        """Initializes Cube variables"""
         self.position = start
         self.direction_x = 1 # Set to 1 so that snake is moving upon program start. If it wasn't set then that would mean user would have to click a button to start moving.
         self.direction_y = 0
         self.color = color
 
     def move(self, dirnx, dirny):
-        """"""
+        """Method to move cube in given direction"""
         self.direction_x = dirnx
         self.direction_y = dirny
         self.position = (self.position[0] + self.direction_x, self.position[1] + self.direction_y)
 
     def draw(self, surface, eyes=False):
         """
-        Need to figure out distance between each x and y value
-        for each cube. Pygame draws in the top left hand corner 
-        of the object
+        Method to draw cube on screen. Need to figure out 
+        distance between each x and y value for each cube. 
+        Pygame draws in the top left hand corner of the object
         """
         distance = self.width // self.rows
         i, j = self.position[0], self.position[1] # row, column
@@ -68,11 +65,7 @@ class Cube():
             pygame.draw.circle(surface, (0, 0, 0), circle_midde2, radius)
 
 class Snake():
-    """
-    Class representing snake
-
-    Attributes:
-    """
+    """Class representing snake"""
     # Defining static variables
     body = [] # List of cube representing snake body
     turns = {}
@@ -85,7 +78,7 @@ class Snake():
         self.direction_x, self.direction_y = 0, 1 # These direction variables will be in the range [-1, 1] and will keep track of which direction we are moving in
 
     def move(self):
-        """"""
+        """Method to move snake in direction indicated by user"""
         # Checking if user is pressing directional keys 
         # to change direction of snake. Using if-elif 
         # statements because we don't want user to click
@@ -152,11 +145,16 @@ class Snake():
                 else:
                     cube.move(cube.direction_x, cube.direction_y) # If we are not at the edge of the screen then we will move the cube in the same direction it was going in before.
 
-    def reset(self, pos):
-        pass
+    def reset(self, position):
+        """Method to get rid of body, turns, direction_x and direction_y"""
+        self.head = Cube(position)
+        self.body = []
+        self.body.append(self.head)
+        self.turns = {}
+        self.direction_x, self.direction_y = 0, 1 # Set to 1 so snake is moving on game start
 
     def addCube(self):
-        """"""
+        """Method to add cube to snake body"""
         tail = self.body[-1]
         dx, dy = tail.direction_x, tail.direction_y
         # Checking which direction the tail is moving in so we can add a cube accordingly
@@ -174,6 +172,7 @@ class Snake():
         self.body[-1].direction_y = dy
 
     def draw(self, surface):
+        """Method to draw snake body on screen"""
         for i, cube in enumerate(self.body):
             if i == 0:
                 cube.draw(surface, True) # Draw eyes onto the head of the snake only
@@ -182,7 +181,8 @@ class Snake():
 
 def drawGrid(width, rows, surface):
     """
-    We are going to figure out how big each square in the grid
+    Method to draw grid with rows in game window. We are 
+    going to figure out how big each square in the grid
     is going to be. What we will do is draw lines down and across
     but we need to figure out where to draw those lines. So
     we have to figure out the gap between each of the lines
@@ -196,7 +196,7 @@ def drawGrid(width, rows, surface):
         pygame.draw.line(surface, (255, 255, 255), (0, y), (width, y)) # Draw horizontal line
 
 def redrawWindow(surface):
-    """"""
+    """Method to redraw game window"""
     global rows, width, s, snack
     surface.fill((0, 0, 0))
     s.draw(surface)
@@ -205,7 +205,7 @@ def redrawWindow(surface):
     pygame.display.update()
 
 def randomSnack(rows, snake):
-    """Generate random snack on screen that snake can eat"""
+    """Method to generate random snack on screen that snake can eat"""
     positions = snake.body
     while True:
         x, y = random.randrange(rows), random.randrange(rows)
@@ -220,8 +220,15 @@ def randomSnack(rows, snake):
     return (x, y)
 
 def message_box(subject, content):
-    """"""
-    pass
+    """Method to generate message box pop up indicating user about status of game"""
+    root = tk.Tk()
+    root.attributes("-topmost", True) # Ensuring message box shows up on top of everything so that if many windows are open it will show up on top of them
+    root.withdraw() # Make message box invisible
+    messagebox.showinfo(subject, content)
+    try:
+        root.destroy()
+    except:
+        pass
 
 def main():
     """Main function to run Snake game"""
@@ -246,6 +253,13 @@ def main():
         if s.body[0].position == snack.position:
             s.addCube()
             snack = Cube(randomSnack(rows, s), color=(0, 255, 0))
+        # Checking for snake body colliding with itself
+        for i in range(len(s.body)):
+            if s.body[i].position in list(map(lambda z:z.position, s.body[i + 1:])):
+                print('Score: ', len(s.body))
+                message_box('You Lost!', 'Play again...')
+                s.reset((10, 10))
+                break
         redrawWindow(window)
 
 if __name__ == '__main__':
