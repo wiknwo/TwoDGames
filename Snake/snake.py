@@ -156,8 +156,23 @@ class Snake():
         pass
 
     def addCube(self):
-        pass
-    
+        """"""
+        tail = self.body[-1]
+        dx, dy = tail.direction_x, tail.direction_y
+        # Checking which direction the tail is moving in so we can add a cube accordingly
+        if dx == 1 and dy == 0:
+            self.body.append(Cube((tail.position[0] - 1, tail.position[1])))
+        elif dx == -1 and dy == 0:
+            self.body.append(Cube((tail.position[0] + 1, tail.position[1])))
+        elif dx == 0 and dy == 1:
+            self.body.append(Cube((tail.position[0], tail.position[1] - 1)))
+        elif dx == 0 and dy == -1:
+            self.body.append(Cube((tail.position[0], tail.position[1] + 1)))
+        # Set direction for added cube so that it moves with snake body
+        # Wherever the tail is moving that is where the added cube is going to be moving
+        self.body[-1].direction_x = dx
+        self.body[-1].direction_y = dy
+
     def draw(self, surface):
         for i, cube in enumerate(self.body):
             if i == 0:
@@ -182,15 +197,27 @@ def drawGrid(width, rows, surface):
 
 def redrawWindow(surface):
     """"""
-    global rows, width, s
+    global rows, width, s, snack
     surface.fill((0, 0, 0))
     s.draw(surface)
+    snack.draw(surface)
     drawGrid(width, rows, surface)
     pygame.display.update()
 
-def randomSnack(rows, items):
-    """"""
-    pass
+def randomSnack(rows, snake):
+    """Generate random snack on screen that snake can eat"""
+    positions = snake.body
+    while True:
+        x, y = random.randrange(rows), random.randrange(rows)
+        # Getting a list of a filtered list and seeing if any
+        # of the positions is the same as the current position
+        # of the snake i.e. trying not to put a snack on top 
+        # of the snake
+        if len(list(filter(lambda z:z.position == (x, y), positions))) > 0:
+            continue
+        else:
+            break
+    return (x, y)
 
 def message_box(subject, content):
     """"""
@@ -199,11 +226,12 @@ def message_box(subject, content):
 def main():
     """Main function to run Snake game"""
     # Setting up window
-    global width, rows, s
+    global width, rows, s, snack
     width = 500 # Dimensions of square shaped grid
     rows = 20 # Denotes how many rows and columns we will have on the grid. Can be set to any value that divides width evenly otherwise rows and columns will look awkward. Also determines room for snake to move around.
     window = pygame.display.set_mode((width, width))
     s = Snake((255, 0, 0), (10, 10))
+    snack = Cube(randomSnack(rows, s), color=(0, 255, 0))
     flag = True
     clock = pygame.time.Clock()
 
@@ -213,6 +241,11 @@ def main():
         pygame.time.delay(50) # Delays 50 milliseconds every time so program doesn't run too fast. The lower this goes, the faster the game will be.
         clock.tick(10) # Ensures game doesn't run more than 10 frames per second. The lower this goes, the slower the game will be.
         s.move()
+        # Checking if head of snack hit snack, if it does 
+        # we add another cube to the body of the snake.
+        if s.body[0].position == snack.position:
+            s.addCube()
+            snack = Cube(randomSnack(rows, s), color=(0, 255, 0))
         redrawWindow(window)
 
 if __name__ == '__main__':
