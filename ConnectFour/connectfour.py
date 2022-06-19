@@ -28,6 +28,7 @@ BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
+WHITE = (255, 255, 255)
 RADIUS = SQUARE_SIZE // 2 - 5
 WINNER_FONT = pygame.font.SysFont('monospace', 65)
 pygame.display.set_caption('Connect Four') # Change heading in game window
@@ -122,8 +123,13 @@ while not game_over:
         # Tracking which column user has placed piece into
         if event.type == pygame.MOUSEBUTTONDOWN:
             pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, SQUARE_SIZE))
+            # Check if game is a draw
+            if np.count_nonzero(board) == ROW_COUNT * COLUMN_COUNT:
+                label = WINNER_FONT.render('Draw!', 1, WHITE)
+                screen.blit(label, (0, 0))
+                game_over = True
             # Ask for player 1 input
-            if turn == 0:
+            elif turn == 0:
                 mouse_x_coord = event.pos[0]
                 column_index = math.floor(mouse_x_coord // SQUARE_SIZE)
                 if isValidLocation(board, column_index):
@@ -133,8 +139,8 @@ while not game_over:
                         label = WINNER_FONT.render('Player 1 wins!', 1, RED)
                         screen.blit(label, (0, 0))
                         game_over = True
-            # # Ask for player 2 input
-            else:
+            # Ask for player 2 input
+            elif turn == 1:
                 mouse_x_coord = event.pos[0]
                 column_index = math.floor(mouse_x_coord // SQUARE_SIZE)
                 if isValidLocation(board, column_index):
