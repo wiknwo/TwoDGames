@@ -46,15 +46,17 @@ def isValidLocation(board, column_index):
     return board[ROW_COUNT - 1][column_index] == 0 # Checking if top most slot in board is filled or not
 
 def getNextOpenRow(board, column_index):
+    """Function to get index of next available row on board"""
     for row_index in range(ROW_COUNT):
         if board[row_index][column_index] == 0:
             return row_index
 
 def printBoard(board):
+    """Function to print board in terminal"""
     print(np.flip(board, 0))
 
 def winningMove(board, piece):
-    """Check for vertical, horizontal or diagonal line of four pieces"""
+    """Function to check for vertical, horizontal or diagonal line of four pieces"""
     # Check for horizontal line of four pieces
     for column_index in range(COLUMN_COUNT - 3):
         for row_index in range(ROW_COUNT):
@@ -80,7 +82,7 @@ def winningMove(board, piece):
                 return True
 
 def drawBoard(board):
-    """Function to darw the connect four board"""
+    """Function to draw the connect four board"""
     for column_index in range(COLUMN_COUNT):
         for row_index in range(ROW_COUNT):
             pygame.draw.rect(screen, BLUE, (column_index * SQUARE_SIZE, row_index * SQUARE_SIZE + SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
