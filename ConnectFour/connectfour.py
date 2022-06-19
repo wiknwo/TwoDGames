@@ -12,6 +12,10 @@ player can always win by playing the right moves.
 import numpy as np
 import pygame
 import sys
+import math
+
+# Initializing pygame settings
+pygame.font.init()
 
 # Defining constants
 ROW_COUNT = 6
@@ -22,7 +26,11 @@ HEIGHT = (ROW_COUNT + 1) * SQUARE_SIZE
 SCREEN_SIZE = (WIDTH, HEIGHT)
 BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+YELLOW = (255, 255, 0)
 RADIUS = SQUARE_SIZE // 2 - 5
+WINNER_FONT = pygame.font.SysFont('monospace', 65)
+pygame.display.set_caption('Connect Four') # Change heading in game window
 
 # Functions
 def createBoard():
@@ -77,6 +85,14 @@ def drawBoard(board):
         for row_index in range(ROW_COUNT):
             pygame.draw.rect(screen, BLUE, (column_index * SQUARE_SIZE, row_index * SQUARE_SIZE + SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
             pygame.draw.circle(screen, BLACK, (column_index * SQUARE_SIZE + SQUARE_SIZE // 2, row_index * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE // 2), RADIUS)
+    
+    for column_index in range(COLUMN_COUNT):
+        for row_index in range(ROW_COUNT):
+            if board[row_index][column_index] == 1:
+                pygame.draw.circle(screen, RED, (column_index * SQUARE_SIZE + SQUARE_SIZE // 2, HEIGHT - (row_index * SQUARE_SIZE + SQUARE_SIZE // 2)), RADIUS)
+            elif board[row_index][column_index] == 2:
+                pygame.draw.circle(screen, YELLOW, (column_index * SQUARE_SIZE + SQUARE_SIZE // 2, HEIGHT - (row_index * SQUARE_SIZE + SQUARE_SIZE // 2)), RADIUS)
+    pygame.display.update()  
 
 board = createBoard()
 printBoard(board)
@@ -92,26 +108,43 @@ while not game_over:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
+        # Enabling feature to allow user's piece to hover above board
+        if event.type == pygame.MOUSEMOTION:
+            pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, SQUARE_SIZE))
+            mouse_x_coord = event.pos[0]
+            if turn == 0:
+                pygame.draw.circle(screen, RED, (mouse_x_coord, SQUARE_SIZE // 2), RADIUS)
+            else:
+                pygame.draw.circle(screen, YELLOW, (mouse_x_coord, SQUARE_SIZE // 2), RADIUS)
+        pygame.display.update() 
+        # Tracking which column user has placed piece into
         if event.type == pygame.MOUSEBUTTONDOWN:
-            pass
+            pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, SQUARE_SIZE))
             # Ask for player 1 input
-            # if turn == 0:
-            #     column_index = int(input("Player 1 Make your selection (0 - 6):"))
-            #     if isValidLocation(board, column_index):
-            #         row_index = getNextOpenRow(board, column_index)
-            #         dropPiece(board, row_index, column_index, 1)
-            #         if winningMove(board, 1):
-            #             print("Player 1 wins!")
-            #             game_over = True
+            if turn == 0:
+                mouse_x_coord = event.pos[0]
+                column_index = math.floor(mouse_x_coord // SQUARE_SIZE)
+                if isValidLocation(board, column_index):
+                    row_index = getNextOpenRow(board, column_index)
+                    dropPiece(board, row_index, column_index, 1)
+                    if winningMove(board, 1):
+                        label = WINNER_FONT.render('Player 1 wins!', 1, RED)
+                        screen.blit(label, (0, 0))
+                        game_over = True
             # # Ask for player 2 input
-            # else:
-            #     column_index = int(input("Player 2 Make your selection (0 - 6):"))
-            #     if isValidLocation(board, column_index):
-            #         row_index = getNextOpenRow(board, column_index)
-            #         dropPiece(board, row_index, column_index, 2)
-            #         if winningMove(board, 2):
-            #             print("Player 2 wins!")
-            #             game_over = True
-            # printBoard(board)
-            # turn += 1
-            # turn = turn % 2
+            else:
+                mouse_x_coord = event.pos[0]
+                column_index = math.floor(mouse_x_coord // SQUARE_SIZE)
+                if isValidLocation(board, column_index):
+                    row_index = getNextOpenRow(board, column_index)
+                    dropPiece(board, row_index, column_index, 2)
+                    if winningMove(board, 2):
+                        label = WINNER_FONT.render('Player 2 wins!', 1, YELLOW)
+                        screen.blit(label, (0, 0))
+                        game_over = True
+            printBoard(board)
+            drawBoard(board)
+            turn += 1
+            turn = turn % 2
+            if game_over:
+                pygame.time.wait(3000)
