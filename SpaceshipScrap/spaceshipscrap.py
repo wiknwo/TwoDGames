@@ -21,6 +21,7 @@ WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('SpaceshipScrap') # Change heading in game window
 WHITE = (255, 255, 255)
 FRAMES_PER_SECOND = 60
+VELOCITY = 5
 SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 55, 40
 YELLOW_SPACESHIP_IMAGE = pygame.image.load(os.path.join('assets', 'spaceship_yellow.png'))
 YELLOW_SPACESHIP_IMAGE = pygame.transform.rotate(pygame.transform.scale(YELLOW_SPACESHIP_IMAGE, (SPACESHIP_WIDTH, SPACESHIP_HEIGHT)), 90) # Resize and rotate image
@@ -34,13 +35,35 @@ def drawWindow(red, yellow):
     WINDOW.blit(RED_SPACESHIP_IMAGE, (red.x, red.y))
     pygame.display.update() # Have to manually update display for color to show
 
+def yellowMovement(keys_pressed, yellow):
+    """Keyboard mappings for yellow rectangle which is moving yellow spaceship"""
+    if keys_pressed[pygame.K_a]: # LEFT
+        yellow.x -= VELOCITY
+    if keys_pressed[pygame.K_d]: # RIGHT
+        yellow.x += VELOCITY
+    if keys_pressed[pygame.K_w]: # UP
+        yellow.y -= VELOCITY
+    if keys_pressed[pygame.K_s]: # DOWN
+        yellow.y += VELOCITY
+
+def redMovement(keys_pressed, red):
+    """Keyboard mappings for red rectangle which is moving red spaceship"""
+    if keys_pressed[pygame.K_LEFT]: 
+        red.x -= VELOCITY
+    if keys_pressed[pygame.K_RIGHT]: 
+        red.x += VELOCITY
+    if keys_pressed[pygame.K_UP]: 
+        red.y -= VELOCITY
+    if keys_pressed[pygame.K_DOWN]: 
+        red.y += VELOCITY
+
 # Game Loop
 def main():
     """Main function to run SpaceshipScrap"""
     # Define two rectangles to represent our spaceships so
     # we can control where they are moving
-    red = pygame.Rect(100, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
-    yellow = pygame.Rect(700, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
+    red = pygame.Rect(700, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
+    yellow = pygame.Rect(100, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
     clock = pygame.time.Clock()
     run = True
     while run:
@@ -48,8 +71,12 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-        red.x += 1 # Will move 60 pixels per second
+        # Keyboard bindings
+        keys_pressed = pygame.key.get_pressed()
+        yellowMovement(keys_pressed, yellow)        
+        redMovement(keys_pressed, red)
         drawWindow(red, yellow)
+        
     pygame.quit()
 
 if __name__ == '__main__':
