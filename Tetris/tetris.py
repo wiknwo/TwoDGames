@@ -229,23 +229,47 @@ def createGrid(locked_positions = {}):
 def convertTetrominoFormat(tetromino):
     """"""
     positions = []
-    format = tetromino.shape
- 
-def validTetromino(tetromino, grid):
-    pass
+    format = tetromino.shape[tetromino.rotation % len(tetromino.shape)]
+    # 
+    for row_index, line in enumerate(format):
+        row = list(line)
+        for column_index, character in enumerate(row):
+            if character == '0':
+                positions.append((tetromino.x + column_index, tetromino.y + row_index))
+    # 
+    for i, position in enumerate(positions):
+        positions[i] = (position[0] - 2, position[1] - 4) # Moving everything to the left and up so when we are displaying everything looks accurate
+    
+    return positions
 
 def validSpace(tetromino, grid):
-    pass
+    """"""
+    accepted_positions = [[(column_index, row_index) for column_index in range(10) if grid[row_index][column_index] == BLACK] for row_index in range(20)] # Only add to accepted positions if its empty, otherwise a tetromino is occupying the position.
+    accepted_positions = [column_index for sublist in accepted_positions for column_index in sublist]
+    formatted = convertTetrominoFormat(tetromino)
+    for position in formatted:
+        if position not in accepted_positions:
+            if position[1] > -1: # Because of offset, sometimes positions will be negative and we need to account for that
+                return False
+    return True
  
 def checkLost(positions):
-    pass
+    """Function to check if any of the tetrominos are above the screen"""
+    for position in positions:
+        x, y = position
+        if y < 1:
+            return True
+    return False
  
 def getTetromino():
     """Function to randomly select next tetromino user will use in tetris"""
     return Tetromino(5, 0, random.choice(shapes))
  
 def drawTextMiddle(text, size, color, surface):
-    pass
+    """Function to draw text in centre of screen"""
+    font = pygame.font.SysFont('comicsans', size, bold = True)
+    label = font.render(text, 1, color)
+    surface.blit(label, (TOP_LEFT_X + PLAY_WIDTH // 2 - (label.get_width() // 2), TOP_LEFT_Y + PLAY_HEIGHT // 2 - (label.get_height() // 2)))
    
 def drawGridLines(surface, grid):
     """Function to draw lines on tetris grid"""
@@ -255,31 +279,68 @@ def drawGridLines(surface, grid):
         for column_index in range(len(grid[row_index])):
             pygame.draw.line(surface, GREY, (start_x + column_index * BLOCK_SIZE, start_y), (start_x + column_index * BLOCK_SIZE, start_y + PLAY_HEIGHT))
 
-def clearRows(grid, locked):
-    pass
- 
+def clearRows(grid, locked_positions):
+    """Function to clear row if user gets a line"""
+    inc = 0
+    for row_index in range(len(grid) - 1, -1, -1):
+        row = grid[row_index]
+        if BLACK not in row:
+            inc += 1
+            ind = row_index
+            # Clear row
+            for column_index in range(len(row)):
+                try:
+                    del locked_positions[(column_index, row_index)]
+                except:
+                    continue
+    # Shift rows since we have cleared a row
+    if inc > 0:
+        # For every key in our sorted list of locked positions
+        # based on the y value
+        for key in sorted(list(locked_positions), key = lambda x: x[1])[::-1]:
+            x, y = key
+            if y < ind: # If y is above current index of row we removed
+                new_key = (x, y + inc)
+                locked_positions[new_key] = locked_positions.pop(key)
+    return inc
+
 def drawNextTetromino(tetromino, surface):
-    pass
- 
-def drawWindow(surface, grid):
+    """Function to draw the next tetromino on the screen to show the user"""
+    font = pygame.font.SysFont('comicsans', 25)
+    label = font.render('Next Tetromino', 1, WHITE)
+    start_x = TOP_LEFT_X + PLAY_WIDTH + 20
+    start_y = TOP_LEFT_Y + PLAY_HEIGHT // 2 - 100
+    format = tetromino.shape[tetromino.rotation % len(tetromino.shape)]
+    for row_index, line in enumerate(format):
+        row = list(line)
+        for column_index, character in enumerate(row):
+            if character == '0':
+                pygame.draw.rect(surface, tetromino.color, (start_x + column_index * BLOCK_SIZE, start_y + row_index * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE), 0)
+    surface.blit(label, (start_x + 10, start_y - 30))
+
+def drawWindow(surface, grid, score = 0):
     """Function to draw game window"""
     surface.fill(BLACK)
     gamefont = pygame.font.SysFont('comicsans', 60)
     label = gamefont.render('Tetris', 1, WHITE)
-    surface.blit(label, (TOP_LEFT_X + PLAY_WIDTH // 2 - (label.get_width() // 2), 30)) # Figure out where middle of screen is
+    surface.blit(label, (TOP_LEFT_X + PLAY_WIDTH // 2 - (label.get_width() // 2), 0)) # Figure out where middle of screen is
+    # Draw the score
+    scorefont = pygame.font.SysFont('comicsans', 25)
+    label = scorefont.render('Score: ' + str(score), 1, WHITE)
+    start_x = TOP_LEFT_X + PLAY_WIDTH + 20
+    start_y = TOP_LEFT_Y + PLAY_HEIGHT // 2 - 100
+    surface.blit(label, (start_x + 20, start_y + 160))
     # Draw the tetris grid
     for row_index in range(len(grid)):
         for column_index in range(len(grid[row_index])):
             pygame.draw.rect(surface, grid[row_index][column_index], (TOP_LEFT_X + column_index * BLOCK_SIZE, TOP_LEFT_Y + row_index * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE), 0)
     pygame.draw.rect(surface, RED, (TOP_LEFT_X, TOP_LEFT_Y, PLAY_WIDTH, PLAY_HEIGHT), 4)
-
-    
     drawGridLines(surface, grid)
-    pygame.display.update()
 
 def main(win):
     """Main function to run tetris game"""
-    locked_positions = {}
+    pygame.init()
+    locked_positions = {} # key: position (x, y), value: color (r, g, b)
     grid = createGrid(locked_positions)
     change_piece = False
     run = True
@@ -287,12 +348,40 @@ def main(win):
     next_tetromino = getTetromino()
     clock = pygame.time.Clock()
     fall_time = 0
+    fall_speed = 0.27
+    level_time = 0 
+    score = 0
 
     # Game Loop
     while run:
+        grid = createGrid(locked_positions) # Every time we move there is a chance we will add to locked positions
+        fall_time += clock.get_rawtime() # Gets the amount of time since last clock.tick
+        level_time += clock.get_rawtime()
+        clock.tick()
+
+        if level_time / 1000 > 5: # Greater than 5 seconds
+            level_time = 0
+            if level_time > 0.15:
+                level_time -= 0.005
+        
+        if fall_time / 1000 > fall_speed:
+            fall_time = 0
+            current_tetromino.y += 1
+            # Handle case where tetromino hits bottom of screen
+            if not validSpace(current_tetromino, grid) and current_tetromino.y > 0:
+                # If we are moving down and we move into a position
+                # that is not valid that means we know we didn't move left or right 
+                # off the screen because we are moving down 
+                # so it means we hit the bottom of the screen or 
+                # moved into another tetromino. So, stop moving 
+                # this tetromino and change it to the next one.
+                current_tetromino.y -= 1
+                change_piece = True 
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+                pygame.display.quit()
             if event.type == pygame.KEYDOWN:
                 # Cases we need to handle:
                 # 1. Tetromino is moving off the screen 
@@ -313,12 +402,51 @@ def main(win):
                     current_tetromino.rotation += 1
                     if not validSpace(current_tetromino, grid):
                         current_tetromino.rotation -= 1
-            drawWindow(win, grid)
+            
+            # Check all positions of shape moving down to see
+            # if we've hit the ground or see if we need to lock it
+            shape_positions = convertTetrominoFormat(current_tetromino)
+            for i in range(len(shape_positions)):
+                x, y = shape_positions[i]
+                if y > -1: # Means we are not above the screen
+                    grid[y][x] = current_tetromino.color
+            # 
+            if change_piece:
+                # Locked position: (i) Tetromino is no longer moving
+                # (ii) Tetromino hit bottom of the screen. Updating
+                # grid with positions that have now been occupied.
+                for position in shape_positions:
+                    key = (position[0], position[1])
+                    locked_positions[key] = current_tetromino.color
+                current_tetromino = next_tetromino
+                next_tetromino = getTetromino()
+                change_piece = False
+                score += clearRows(grid, locked_positions) * 10
+            
+            drawWindow(win, grid, score)
+            drawNextTetromino(next_tetromino, win)
+            pygame.display.update()
+            # Checking if user has lost game
+            if checkLost(locked_positions):
+                drawTextMiddle("YOU LOST!", 80, WHITE, win)
+                pygame.display.update()
+                pygame.time.delay(1500)
+                run = False
 
-def mainMenu(win):
-    """"""
-    main(win)
- 
+def displayMainMenu(win):
+    """Function to make main menu popup when user hits any key"""
+    run = True
+    while run:
+        win.fill(BLACK)
+        drawTextMiddle('Press Any Key To Play', 60, WHITE, win)
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            if event.type == pygame.KEYDOWN:
+                main(win)
+    pygame.display.quit()
+    
 window = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption('Tetris by @wiknwo')
-mainMenu(window)  # start game
+displayMainMenu(window)  # start game
