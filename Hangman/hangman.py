@@ -32,7 +32,7 @@ for i in range(26):
 # Load images
 images = []
 for i in range(7):
-    images.append(pygame.image.load('images/images/hangman' + str(i) + '.png'))
+    images.append(pygame.image.load('images/hangman' + str(i) + '.png'))
 
 # Game variables
 hangman_status = 0 # Tells us which image to draw at each point in the game
