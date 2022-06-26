@@ -113,8 +113,8 @@ class Board:
                         row = max(row_index - 3, 0)
                     else:
                         row = min(row_index + 3, ROWS)
-                moves.update(self.__traverse_left(row_index + step, row, step, color, left - 1, skipped = last))
-                moves.update(self.__traverse_right(row_index + step, row, step, color, left + 1, skipped = last))
+                    moves.update(self.__traverse_left(row_index + step, row, step, color, left - 1, skipped = last))
+                    moves.update(self.__traverse_right(row_index + step, row, step, color, left + 1, skipped = last))
                 break            
             elif current.color == color: # Piece we are trying to move to is same color as our piece then we can't move
                 break
@@ -144,8 +144,8 @@ class Board:
                         row = max(row_index - 3, 0)
                     else:
                         row = min(row_index + 3, ROWS)
-                moves.update(self.__traverse_left(row_index + step, row, step, color, right - 1, skipped = last))
-                moves.update(self.__traverse_right(row_index + step, row, step, color, right + 1, skipped = last))
+                    moves.update(self.__traverse_left(row_index + step, row, step, color, right - 1, skipped = last))
+                    moves.update(self.__traverse_right(row_index + step, row, step, color, right + 1, skipped = last))
                 break            
             elif current.color == color: # Piece we are trying to move to is same color as our piece then we can't move
                 break
