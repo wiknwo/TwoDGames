@@ -63,6 +63,8 @@ def main():
         clock.tick(FRAMES_PER_SECOND)
         if game.winner() != None:
             print(game.winner())
+            run = False
+            pygame.time.wait(3000)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -70,7 +72,6 @@ def main():
                 mouse_position = pygame.mouse.get_pos()
                 row, column = getRowColumnFromMouse(mouse_position)
                 game.select(row, column)
-
         game.update()
     pygame.quit()
 

@@ -1,7 +1,7 @@
 import pygame
 
 # Display settings
-WIDTH, HEIGHT = 800, 800
+WIDTH, HEIGHT = 600, 600
 ROWS, COLUMNS = 8, 8
 SQUARE_SIZE = WIDTH // COLUMNS
 
