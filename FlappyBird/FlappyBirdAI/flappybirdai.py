@@ -17,9 +17,10 @@ reached ten or more points, a silver medal from twenty
 points, a gold medal from thirty points, and a platinum 
 medal from forty points.
 """
+# https://stackoverflow.com/questions/59592801/python-visual-studio-code-module-not-found
 import pygame
 import neat
-import time
+import pickle
 import os
 import random
 pygame.font.init()
@@ -39,6 +40,9 @@ STAT_FONT = pygame.font.SysFont("roboto", 50)
 
 # Defining colors
 WHITE = (255, 255, 255)
+
+# Defining generation
+GEN = 0
 
 class Bird:
     # Class constants (static variables)
@@ -176,20 +180,33 @@ class Base:
         window.blit(BASE_IMAGE, (self.x1, self.y))
         window.blit(BASE_IMAGE, (self.x2, self.y))
     
-def draw_window(window, bird, pipes, base, score):
+def draw_window(window, birds, pipes, base, score, gen):
     """Function to draw game window"""
     window.blit(BACKGROUND_IMAGE, (0, 0))
     for pipe in pipes:
         pipe.draw(window)
     text = STAT_FONT.render("Score " + str(score), 1, WHITE)
     window.blit(text, (WIDTH - 10 - text.get_width(), 50)) # Changed from 10 to 50 so I could see the score
+    text = STAT_FONT.render("Gen " + str(gen), 1, WHITE)
+    window.blit(text, (10, 50))
     base.draw(window)
-    bird.draw(window)
+    for bird in birds:
+        bird.draw(window)
     pygame.display.update()
 
-def main():
+def main(genomes, config):
     """Function to run main game loop"""
-    faby = Bird(230, 350)
+    global GEN
+    GEN += 1
+    nets = []
+    ge = []
+    birds = []
+    for genome_id, g in genomes:
+        net = neat.nn.FeedForwardNetwork.create(g, config)
+        nets.append(net)
+        birds.append(Bird(230, 350))
+        g.fitness = 0
+        ge.append(g)
     base = Base(700)
     pipes = [Pipe(600)]
     score = 0
@@ -201,33 +218,68 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+                pygame.quit()
+                quit()
         # Moving objects across the screen
-        #faby.move()
+        pipe_index = 0
+        if len(birds) > 0:
+            if len(pipes) > 1 and birds[0].x > pipes[0].x + pipes[0].PIPE_TOP.get_width():
+                pipe_index = 1
+        else:
+            run = False
+            break
+        for i, bird in enumerate(birds):
+            bird.move()
+            ge[i].fitness += 0.1
+            output = nets[i].activate((bird.y, abs(bird.y - pipes[pipe_index].height), abs(bird.y - pipes[pipe_index].bottom)))
+            if output[0] > 0.5:
+                bird.jump()
+        # Checking pipe collisions
         pipes_to_remove = []
         add_pipe = False
         for pipe in pipes:
-            if pipe.collide(faby):
-                pass
+            for i, bird in enumerate(birds):
+                if pipe.collide(bird):
+                    ge[i].fitness -= 1
+                    birds.pop(i)
+                    nets.pop(i)
+                    ge.pop(i)
+                if not pipe.passed and pipe.x < bird.x:
+                    pipe.passed = True
+                    add_pipe = True
             if pipe.x + pipe.PIPE_TOP.get_width() < 0:
                 pipes_to_remove.append(pipe)
-            if not pipe.passed and pipe.x < faby.x:
-                pipe.passed = True
-                add_pipe = True
             pipe.move()
         # Adding a pipe to pipes list for bird to pass
         if add_pipe:
             score += 1
+            for g in ge:
+                g.fitness += 5
             pipes.append(Pipe(600))
         # Removing pipes that have been passed
         for pipe in pipes_to_remove:
             pipes.remove(pipe)
         # Checking if bird has hit the base
-        if faby.y + faby.image.get_height() >= 730:
-            pass
+        for i, bird in enumerate(birds):
+            if bird.y + bird.image.get_height() >= 730 or bird.y < 0:
+                birds.pop(i)
+                nets.pop(i)
+                ge.pop(i)
         base.move()
-        draw_window(window, faby, pipes, base, score)
-    pygame.quit()
-    quit()
+        draw_window(window, birds, pipes, base, score, GEN)
+
+def run(config_path):
+    """Function to load neat configuration details"""
+    config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction, 
+                         neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                         config_path)
+    p = neat.Population(config)
+    p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+    winner = p.run(main, 50)
 
 if __name__ == '__main__':
-    main()
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, "config-feedforward.txt")
+    run(config_path)
