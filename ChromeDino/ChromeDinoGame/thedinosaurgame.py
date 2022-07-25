@@ -24,7 +24,7 @@ pygame.font.init()
 HEIGHT = 600
 WIDTH = 1100
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('ChromeDinoAI by @wiknwo')
+pygame.display.set_caption('ChromeDino by @wiknwo')
 
 # Loading images
 DINO_RUNNING_IMAGES = [pygame.image.load(os.path.join("Assets/Dino", "DinoRun1.png")), pygame.image.load(os.path.join("Assets/Dino", "DinoRun2.png"))]
