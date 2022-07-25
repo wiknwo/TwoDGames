@@ -17,6 +17,8 @@ import pygame
 import os
 import random
 import sys
+import neat
+import math
 pygame.init()
 pygame.font.init()
 
@@ -118,14 +120,35 @@ class LargeCactus(Obstacle):
 def remove(index):
     """Function to remove dinosaur that runs into obstacle"""
     dinosaurs.pop(index)
+    ge.pop(index)
+    nets.pop(index)
+
+def distance(a_coords, b_coords):
+    """Function to calculate euclidean distance between two sets of coordinates"""
+    dx = a_coords[0] - b_coords[0]
+    dy = a_coords[1] - b_coords[1]
+    return math.sqrt(dx**2 + dy**2)
 
 # Game Loop
-def main():
-    global game_speed, x_coord_bg, y_coord_bg, obstacles, dinosaurs, points
+def eval_genomes(genomes, config):
+    global game_speed, x_coord_bg, y_coord_bg, obstacles, dinosaurs, ge, nets, points
     points = 0
     x_coord_bg = 0
     y_coord_bg = 380
     game_speed = 20
+    clock = pygame.time.Clock()
+    obstacles = []
+    dinosaurs = []
+    ge = [] # List of dictionaries containing information on each dinosaur
+    nets = []
+    run = True
+
+    for genome_id, genome in genomes:
+        dinosaurs.append(Dinosaur())
+        ge.append(genome)
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+        nets.append(net)
+        genome.fitness = 0
 
     # Nested functions
     def display_score():
@@ -147,10 +170,6 @@ def main():
             x_coord_bg = 0
         x_coord_bg -= game_speed
 
-    clock = pygame.time.Clock()
-    obstacles = []
-    dinosaurs = [Dinosaur()]
-    run = True
     while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -180,11 +199,12 @@ def main():
             # Checking if dinosaurs collide with obstacles
             for i, dinosaur in enumerate(dinosaurs):
                 if dinosaur.box.colliderect(obstacle.box):
+                    ge[i].fitness -= 1
                     remove(i)
         # Taking user input
-        user_input = pygame.key.get_pressed()
         for i, dinosaur in enumerate(dinosaurs):
-            if user_input[pygame.K_SPACE]:
+            output = nets[i].activate((dinosaur.box.y, distance((dinosaur.box.x, dinosaur.box.y), obstacle.box.midtop)))
+            if output[0] > 0.5 and dinosaur.box.y == dinosaur.Y_COORD:
                 dinosaur.isjumping = True
                 dinosaur.isrunning = False
         display_score()
@@ -192,5 +212,18 @@ def main():
         clock.tick(30)
         pygame.display.update()
 
+def run(config_path):
+    """Function to load neat configuration details"""
+    config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction, 
+                         neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                         config_path)
+    p = neat.Population(config)
+    p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+    winner = p.run(eval_genomes, 50) 
+
 if __name__ == '__main__':
-    main()
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, "config.txt")
+    run(config_path)
