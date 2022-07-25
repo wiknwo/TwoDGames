@@ -13,12 +13,15 @@ game progresses, the speed of play gradually increases
 until the user hits an obstacle, prompting an instant game 
 over.
 """
+# https://stackoverflow.com/questions/61365668/applying-saved-neat-python-genome-to-test-environment-after-training
+# https://stackoverflow.com/questions/82831/how-do-i-check-whether-a-file-exists-without-exceptions
 import pygame
 import os
 import random
 import sys
 import neat
 import math
+import pickle
 pygame.init()
 pygame.font.init()
 
@@ -42,6 +45,9 @@ GAME_FONT = pygame.font.SysFont('Roboto', 20)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
+# Defining number of generations
+GENERATIONS = 0
+
 class Dinosaur:
     # Static variables
     X_COORD = 80
@@ -55,6 +61,7 @@ class Dinosaur:
         self.isjumping = False
         self.jump_velocity = self.JUMP_VELOCITY
         self.box = pygame.Rect(self.X_COORD, self.Y_COORD, image.get_width(), image.get_height()) # Places a box around our dinosaur
+        self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         self.step_index = 0 # Cycles through images of running dinosaur
 
     def update(self):
@@ -86,7 +93,13 @@ class Dinosaur:
 
     def draw(self, window):
         """Method to draw dinosaur on window"""
+        # Draw dinosaur on window
         window.blit(self.image, (self.box.x, self.box.y))
+        # Draw hitbox surrounding dinosaur
+        pygame.draw.rect(window, self.color, (self.box.x, self.box.y, self.box.width, self.box.height), 2)
+        # Draw dinosaur's line of sight from eye to nearest obstacle
+        for obstacle in obstacles:
+            pygame.draw.line(window, self.color, (self.box.x + 54, self.box.y + 12), obstacle.box.center, 2)
 
 class Obstacle:
     def __init__(self, image, cacti_count):
@@ -131,7 +144,8 @@ def distance(a_coords, b_coords):
 
 # Game Loop
 def eval_genomes(genomes, config):
-    global game_speed, x_coord_bg, y_coord_bg, obstacles, dinosaurs, ge, nets, points
+    global game_speed, x_coord_bg, y_coord_bg, obstacles, dinosaurs, ge, nets, points, GENERATIONS
+    GENERATIONS += 1
     points = 0
     x_coord_bg = 0
     y_coord_bg = 380
@@ -160,6 +174,16 @@ def eval_genomes(genomes, config):
         text = GAME_FONT.render("Points: {}".format(points), True, BLACK)
         WINDOW.blit(text, (950, 50))
 
+    def display_stats():
+        """Function to display stats of the game and AI"""
+        global dinosaurs, game_speed, ge
+        text_1 = GAME_FONT.render('Dinosaurs Alive: {}'.format(str(len(dinosaurs))), True, BLACK)
+        text_2 = GAME_FONT.render('Generation: {}'.format(str(GENERATIONS)), True, BLACK)
+        text_3 = GAME_FONT.render('Game Speed: {}'.format(str(game_speed)), True, BLACK)
+        WINDOW.blit(text_1, (50, 450))
+        WINDOW.blit(text_2, (50, 480))
+        WINDOW.blit(text_3, (50, 510))
+
     def move_background():
         """Function to make background seem like it's moving"""
         global x_coord_bg, y_coord_bg
@@ -182,6 +206,7 @@ def eval_genomes(genomes, config):
         for dinosaur in dinosaurs:
             dinosaur.update()
             dinosaur.draw(WINDOW)
+
         # Checking if there are any dinosaurs left
         if len(dinosaurs) == 0:
             break
@@ -201,29 +226,50 @@ def eval_genomes(genomes, config):
                 if dinosaur.box.colliderect(obstacle.box):
                     ge[i].fitness -= 1
                     remove(i)
+                else:
+                    ge[i].fitness += 5
         # Taking user input
         for i, dinosaur in enumerate(dinosaurs):
             output = nets[i].activate((dinosaur.box.y, distance((dinosaur.box.x, dinosaur.box.y), obstacle.box.midtop)))
             if output[0] > 0.5 and dinosaur.box.y == dinosaur.Y_COORD:
                 dinosaur.isjumping = True
                 dinosaur.isrunning = False
+        display_stats()
         display_score()
         move_background()
         clock.tick(30)
         pygame.display.update()
 
+def replay_genome(config_path, genome_path="winner.pickle"):
+    # Load required NEAT config
+    config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
+    # Unpickle saved winner
+    with open(genome_path, "rb") as f:
+        genome = pickle.load(f)
+        f.close()
+    # Convert loaded genome into required data structure
+    genomes = [(1, genome)]
+    # Call game with only the loaded genome
+    eval_genomes(genomes, config)
+
 def run(config_path):
     """Function to load neat configuration details"""
-    config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction, 
-                         neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                         config_path)
+    config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
     p = neat.Population(config)
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    winner = p.run(eval_genomes, 50) 
+    winner = p.run(eval_genomes, 50) # Passing fitness function and max number of generations to run
+    # Save best genome
+    with open("winner.pickle", "wb") as f:
+        pickle.dump(winner, f)
+        f.close()
 
 if __name__ == '__main__':
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, "config.txt")
-    run(config_path)
+    # Check if 'winner.pickle' file already exists
+    if os.path.isfile("winner.pickle"):
+        replay_genome(config_path)
+    else:
+        run(config_path)
