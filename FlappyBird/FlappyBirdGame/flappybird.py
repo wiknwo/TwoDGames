@@ -1,5 +1,6 @@
 import pygame
 import sys
+import random
 pygame.init()
 pygame.font.init()
 
@@ -48,10 +49,25 @@ class Bird(pygame.sprite.Sprite):
             self.rect.y += int(self.velocity)
         if self.velocity == 0:
             self.flap = False
+        # Rotate bird
+        self.image = pygame.transform.rotate(self.image, self.velocity * -7)
         # User input
         if user_input[pygame.K_SPACE] and not self.flap and self.rect.y > 0:
             self.flap = True
             self.velocity = -7
+
+class Pipe(pygame.sprite.Sprite):
+    def __init__(self, x, y, image):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = x, y
+
+    def update(self):
+        self.rect.x -= scroll_speed
+        if self.rect.x <= -WIDTH:
+            self.kill()
+
 
 class Ground(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -73,6 +89,9 @@ def main():
     # Create bird object
     faby = pygame.sprite.GroupSingle()
     faby.add(Bird())
+    # Create pipes
+    pipe_timer = 0
+    pipes = pygame.sprite.Group()
     # Create ground object
     x_pos_ground, y_pos_ground = 0, 420 # (0, 520)
     ground = pygame.sprite.Group()
@@ -99,12 +118,24 @@ def main():
             ground.add(Ground(WIDTH, y_pos_ground))
 
         # Draw pipes, ground and bird
+        pipes.draw(WINDOW)
         ground.draw(WINDOW)
         faby.draw(WINDOW)
 
         # Update pipes, ground and bird
+        pipes.update()
         ground.update()
         faby.update(user_input)
+
+        # Spawn pipes
+        if pipe_timer <= 0:
+            x_top, x_bottom = 550, 550
+            y_top = random.randint(-600, -480)
+            y_bottom = y_top + random.randint(90, 130) + BOTTOM_PIPE_IMAGE.get_height()
+            pipes.add(Pipe(x_top, y_top, TOP_PIPE_IMAGE))
+            pipes.add(Pipe(x_bottom, y_bottom, BOTTOM_PIPE_IMAGE))
+            pipe_timer = random.randint(180, 250)
+        pipe_timer -= 1
 
         clock.tick(FRAMES_PER_SECOND)
         pygame.display.update()
