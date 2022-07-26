@@ -5,7 +5,7 @@ pygame.font.init()
 
 # Define window constants
 WIDTH = 551
-HEIGHT = 620
+HEIGHT = 620 # 720
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
 
 # Loading images
@@ -20,9 +20,38 @@ START_IMAGE = pygame.image.load("assets/start.png")
 # Defining game constants and variables
 FRAMES_PER_SECOND = 60
 scroll_speed = 1
+bird_start_position = (100, 200) # (100, 250)
 
 # Define colors
 BLACK = (0, 0, 0)
+
+class Bird(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = BIRD_IMAGES[0]
+        self.rect = self.image.get_rect()
+        self.rect.center = bird_start_position
+        self.image_index = 0
+        self.velocity = 0
+        self.flap = False
+
+    def update(self, user_input):
+        self.image_index += 1
+        if self.image_index >= 30:
+            self.image_index = 0
+        self.image = BIRD_IMAGES[self.image_index // 10]
+        # Gravity and flap
+        self.velocity += 0.5
+        if self.velocity > 7:
+            self.velocity = 7
+        if self.rect.y < 400: # 500
+            self.rect.y += int(self.velocity)
+        if self.velocity == 0:
+            self.flap = False
+        # User input
+        if user_input[pygame.K_SPACE] and not self.flap and self.rect.y > 0:
+            self.flap = True
+            self.velocity = -7
 
 class Ground(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -41,7 +70,11 @@ class Ground(pygame.sprite.Sprite):
 
 # Game loop
 def main():
-    x_pos_ground, y_pos_ground = 0, 420
+    # Create bird object
+    faby = pygame.sprite.GroupSingle()
+    faby.add(Bird())
+    # Create ground object
+    x_pos_ground, y_pos_ground = 0, 420 # (0, 520)
     ground = pygame.sprite.Group()
     ground.add(Ground(x_pos_ground, y_pos_ground))
     clock = pygame.time.Clock()
@@ -55,6 +88,9 @@ def main():
         # Reset frame
         WINDOW.fill(BLACK)
 
+        # User input
+        user_input = pygame.key.get_pressed()
+
         # Draw background
         WINDOW.blit(SKYLINE_IMAGE, (0, 0))
 
@@ -64,9 +100,11 @@ def main():
 
         # Draw pipes, ground and bird
         ground.draw(WINDOW)
+        faby.draw(WINDOW)
 
         # Update pipes, ground and bird
         ground.update()
+        faby.update(user_input)
 
         clock.tick(FRAMES_PER_SECOND)
         pygame.display.update()
