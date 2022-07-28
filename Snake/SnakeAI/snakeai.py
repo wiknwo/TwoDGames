@@ -97,7 +97,7 @@ class SnakeGameAI:
         # 6. return game over and score
         return reward, game_over, self.score
     
-    def is_collision(self, point):
+    def is_collision(self, point=None):
         if point is None:
             point = self.head
         # hits boundary

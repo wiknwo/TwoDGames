@@ -3,6 +3,8 @@ import random
 import numpy as np
 from collections import deque
 from snakeai import SnakeGameAI, Direction, Point, BLOCK_SIZE
+from model import Linear_QNet, QTrainer
+from utils import plot
 
 # Defining constants
 MAX_MEMORY = 100_000
@@ -15,8 +17,8 @@ class Agent:
         self.epsilon = 0 # randomness
         self.discount_rate = 0 
         self.memory = deque(maxlen=MAX_MEMORY) # If we exceed max memory it will automatically call popleft()
-        self.model = None
-        self.trainer = None
+        self.model = Linear_QNet(11, 256, 3)
+        self.trainer = QTrainer(self.model, LEARNING_RATE, self.discount_rate)
 
     def get_state(self, game):
         head = game.snake[0]
@@ -92,7 +94,7 @@ class Agent:
         else:
             # Exploit: Make a move based on our model
             state0 = torch.tensor(state, dtype=torch.float)
-            prediction = self.model.predict(state0) # Makes prediciton based on one state
+            prediction = self.model(state0) # Makes prediciton based on one state
             move_index = torch.argmax(prediction).item()
             final_move[move_index] = 1
         return final_move
@@ -124,8 +126,13 @@ def train():
             # Set new high score if achieved
             if score > best_score:
                 best_score = score
-                # agent.model.save()
+                agent.model.save()
             print('Game', agent.number_of_games, 'Score', score, 'High Score:', best_score)
+            plot_scores.append(score)
+            total_score += score
+            mean_score = total_score / agent.number_of_games
+            plot_mean_scores.append(mean_score)
+            plot(plot_scores, plot_mean_scores)
 
 if __name__ == '__main__':
     train()
